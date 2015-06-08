@@ -23,6 +23,9 @@ trap cat_npm_debug_log ERR
 # Look in package.json's engines.node field for a semver range
 semver_range=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.node)
 
+# Look in package.json's engines.npm field for a npm engine
+npm_engine=$(cat $build_dir/package.json | $bp_dir/vendor/jq -r .engines.npm)
+
 # Resolve node version using semver.io
 node_version=$(curl --silent --get --data-urlencode "range=${semver_range}" https://semver.io/node/resolve)
 
@@ -48,6 +51,24 @@ fi
 status "Downloading and installing node"
 node_url="http://s3pository.heroku.com/node/v$node_version/node-v$node_version-linux-x64.tar.gz"
 curl $node_url -s -o - | tar xzf - -C $build_dir
+
+# Install npm
+if [ "$npm_engine" != "" ]; then
+  if ! [[ "$npm_engine" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    info "Resolving npm version ${npm_engine} via semver.io..."
+    npm_engine=$(curl --silent --get --data-urlencode "range=${npm_engine}" https://semver.io/npm/resolve)
+  fi
+  if [[ `npm --version` == "$npm_engine" ]]; then
+    info "npm `npm --version` already installed with node"
+  else
+    info "Downloading and installing npm $npm_engine (replacing version `npm --version`)..."
+    npm install --unsafe-perm --quiet -g npm@$npm_engine 2>&1 >/dev/null | indent
+  fi
+  warn_old_npm `npm --version`
+else
+  info "Using default npm version: `npm --version`"
+fi
+}
 
 # Move node (and npm) into ./vendor and make them executable
 mkdir -p $build_dir/vendor
