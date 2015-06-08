@@ -64,8 +64,9 @@ cd $build_dir
 # Check for npm version and install it
 if [ "$npm_engine" != "" ]; then
   if ! [[ "$npm_engine" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    status "Resolving npm version ${npm_engine} via semver.io..."
+    status "Requested npm range:  $npm_engine"
     npm_engine=$(curl --silent --get --data-urlencode "range=${npm_engine}" https://semver.io/npm/resolve)
+    status "Resolved npm version: $npm_engine"
   fi
   if [[ `npm --version` == "$npm_engine" ]]; then
     status "npm `npm --version` already installed with node"
